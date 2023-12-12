@@ -60,28 +60,50 @@ options = Options(
     unary_operators=unary_operators,
     populations=populations,
 )
+input = reshape(inputs[1:N*NT,:],N*NT,2)
+input_t = reshape(t[1:N*NT],N*NT,1)
 
-Loss(tree,dataset,options) = QVloss2(tree,dataset,options,NT,N,a)
+QV = find_QV(reshape(input[:,1],NT,N),NT,N)
+
+Loss_g(tree,dataset,options) = QVloss(tree,dataset,options,NT,N,a,QV)
+
+model-g = SRRegressor(
+    niterations=5, 
+    binary_operators=binary_operators,
+    unary_operators=unary_operators,
+    loss_function=Loss-g,
+    populations=populations,
+    parallelism=:multithreading,
+)
+mach_g = machine(model_g,input,input_t)
+
+# Train Model
+@time fit!(mach_g)
+rg=report(mach_g)
+g =linear_model(rg.equations[3],options) # May need to change to 2D interpolation if model requires so
+
+pred_g=abs.(g.(reshape(input[:,1],NT,N)))
+Ig = find_Ig(pred_g,reshape(input[:,1],NT,N),NT,N)
+Loss(tree,dataset,options) = MGFloss2(tree,dataset,options,S,NT,N,a,pred_g,Ig)
 
 model = SRRegressor(
-    niterations=15, 
+    niterations=10, 
     binary_operators=binary_operators,
     unary_operators=unary_operators,
     loss_function=Loss,
     populations=populations,
     parallelism=:multithreading,
 )
-input = reshape(inputs[1:N*NT,:],N*NT,2)
-input_t = reshape(t[1:N*NT],N*NT,1)
+
 mach = machine(model,input,input_t)
-input_t
-# Train Model
+
 @time fit!(mach)
 rf=report(mach)
-f = interp_2D(rf.equations[3], options,1.0)
+f = interp_2D(rf.equations[7], options,1.0)
+
 using Plots
 
-summ = SDE_Analysis_xt(f,g,1.0,0.05,0.95)
+summ = SDE_Analysis_xt(f,g,1.0,0.2,0.8)
 plot(summ)
 plot!(data[:,1,2],data[:,1,1]) # plot first data path as well
 
