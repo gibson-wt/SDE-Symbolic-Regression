@@ -8,10 +8,10 @@ using Interpolations
 include("Loss_Functions.jl")
 
 # Initialise global constants
-N=3
+N=7
 mesh=100
 T=1.0
-sigma = 5e-2
+sigma = 2.5e-2
 # Construct times
 aa = 0:1/mesh:T
 num_timesteps = size(aa)[1]
@@ -35,18 +35,18 @@ x_n = x+noise
 t_=reshape(t,N*(mesh+1),1)
 x_=(reshape(x_n,N*(mesh+1),1))
 
+# Plot our input data
 using Plots
 display(plot(t,x_n, labels="", xlabel="t", ylabel="x",title="Data to be learnt from"))
 
-# Set up loss functions
+# Set up loss functions by determining integrals that are constant for all the losses.
 I2 =  find_I2(x_,S,N,num_timesteps,a)# calculate integral not involving f so we don't need to this on each iteration
 I2_per_batch = find_I2_perbatch(x_,S,N,num_timesteps,a)
 
 loss(tree,dataset,options) = LossDCODE(tree,dataset,options,S,N,num_timesteps,I2_per_batch,a)
 loss_modified(tree,dataset,options) = LossDCODE_modified(tree,dataset,options,S,N,num_timesteps,I2,a)
 
-# Define Operatpors
-
+# Define Operators
 unary_operators = [log]
 binary_operators = [*,+,/] 
 populations = 5
@@ -90,11 +90,11 @@ y,_=eval_tree_array(r.equations[3],reshape(x,1,N*(mesh+1)), options)
 y_modified,_ = eval_tree_array(r2.equations[4],reshape(x,1,N*(mesh+1)), options)
 true_ = -theta1 .* x .* log.(theta2 .* x)
 
-#
+# Plot true vs predicted points
 scatter(true_, y1, xlabel="Truth", ylabel="Prediction")
 scatter(true_, y2, xlabel="Truth", ylabel="Prediction")
 
-#
+# Plot predicted driving functions
 plot([],[],label="", xlabel="t",ylabel="t",title="Comparison")
 plot!(a,true_[1:num_timesteps],label="Target")
 plot!(a,y1[1:num_timesteps],label="D-CODE")
