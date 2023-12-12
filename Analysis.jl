@@ -9,6 +9,7 @@ function SDE_Analysis_xonly(f, g, T, low, high)
     dt = 1//16
     prob = SDEProblem(h,j,u0,tspan)
     ensembleprob = EnsembleProblem(prob)
+    # Use Euler Maruyama method since solving Ito SDEs
     sol = solve(ensembleprob,EM(),dt=dt, EnsembleThreads(), trajectories=1000)
     summ = EnsembleSummary(sol,0:0.01:T;quantiles= [low, high])
     return summ
