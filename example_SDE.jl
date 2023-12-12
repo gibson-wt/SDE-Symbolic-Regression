@@ -114,7 +114,7 @@ plot!(umm)
 sol = ODE_Analysis_xonly(D,T)
 plot!(sol.t,sol.u)
 
-
+# Find True Solution
 ff(z) = sqrt(z)
 bb = ff.(data)
 IIt = find_It(X,bb,t,num_timesteps,N)
@@ -127,3 +127,48 @@ plot!(t,data, label="")
 plot!(t, 0.25*(t.+2).^2,)
 plot!(summ_true, label="True", legend=true) # Plot curve if no noise taken into consideration
 display(Plots.current())
+
+
+# Repeat for Model involving Quadratic variation.
+QV = find_QV(data, num_timesteps,N)
+
+Loss_g(tree,dataset,options)= QVloss(tree,dataset,options,num_timesteps,N,t,QV)
+
+model_g = SRRegressor(
+    niterations=5, 
+    binary_operators=binary_operators,
+    unary_operators=unary_operators,
+    loss_function=Loss_g,
+    populations=populations,
+    parallelism=:multithreading,
+)
+
+mach_g = machine(model_g,x,t_)
+@time fit!(mach_g)
+
+r  =report(mach_g) # 0.21 x
+h = linear_model(r.equations[2],options)
+pred_g=abs.(h.(data))
+Ig=find_Ig(pred_g,data, num_timesteps,N)
+
+Loss_f(tree,dataset,options) = MGFloss2(tree,dataset,options,S,num_timesteps,N,t,pred_g,Ig)
+
+model_Q = SRRegressor(
+    niterations=5, 
+    binary_operators=binary_operators,
+    unary_operators=unary_operators,
+    loss_function=Loss_f,
+    populations=populations,
+    parallelism=:multithreading,
+)
+
+mach_Q = machine(model_Q,x,t_)
+@time fit!(mach_f)
+
+rQ = report(mach_Q)
+fQ = linear_model(rQ.equations[2],options)
+
+plot([],[],label="", xlabel='t',ylabel="X_t",title="Predicted Soltution Vs Data Given")
+plot!(t,data,label="")
+@time summ = SDE_Analysis_xonly(fQ,h,T,0.2,0.8)
+plot!(summ)
