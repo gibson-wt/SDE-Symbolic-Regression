@@ -10,7 +10,8 @@ include("Loss_Functions.jl")
 include("Interpolate.jl")
 include("Analysis.jl")
 
-N = 250
+# Define global constants
+N = 250 # Number of paths
 T=1.0
 dt=0.1
 sigmas = 1e-2:1e-2:1
@@ -35,6 +36,7 @@ end
 
 data = zeros(Float64,num_timesteps,N,num_sigmas)
 
+# Construct data for each sigma
 for j in 1:num_sigmas
     for i in 1:N
         sigma = sigmas[j]
@@ -43,6 +45,8 @@ for j in 1:num_sigmas
         data[:,i,j]=NonLinearSDE_sol
     end
 end
+
+# Predict sigma according to model
 
 ff(z)=sqrt(z)
 sigma_pred = zeros(Float64, num_sigmas)
@@ -54,4 +58,5 @@ for j in 1:num_sigmas
     sigma_pred[j] = sqrt(abs(sigma2))
 end
 
+# Plot Prediction against true value for sigma
 scatter(sigmas,sigma_pred,label="",xlabel="True",ylabel="Prediction",title="True Vs Predicted value of sigma")
