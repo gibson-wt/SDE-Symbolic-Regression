@@ -26,33 +26,28 @@ def load_pickle(fpath):
 load_pickle = py"load_pickle"
 data = load_pickle("real_data_c1.pkl")
 
-using CSV
-using DataFrames
-
-# Assuming your CSV file is named "data.csv"
-data = CSV.read("gemini_BTCUSD_2020_1min", DataFrame)
-
-
 ## Preprocess Data
 S=50
 num_timesteps = size(data)[1]
 M = size(data)[2]
-NT =num_timesteps # Chnage if you want less steps in data
-x = reshape(data[:,1,1],NT,1)
-t = reshape(data[:,1,2],NT,1)
-a = reshape(data[:,1,2],NT,1)
+inds = [1+5*i for i in 0:72]
+NT = size(inds)[1] # Chnage if you want less steps in data
+x = reshape(data[inds,1,1],NT,1)
+t = reshape(data[inds,1,2],NT,1)
+a = reshape(data[inds,1,2],NT,1)
 
 # Fortunately t increments are the same which speeds up calcultions
 
 N=1
 for i in 2:M-1 # Final time increments of different size so ignore
-    if !any(y->y<=0,data[:,i,1])
-        x = vcat(x,data[:,i,1])
-        t = vcat(t,data[:,i,2])
+    if !any(y->y<=0,data[inds,i,1])
+        x = vcat(x,data[inds,i,1])
+        t = vcat(t,data[inds,i,2])
         N+=1
     end
 end
 N
+# N = 30 to restrict number of data point if necessary
 inputs = hcat(x,t)
 starts = collect(1:NT:N*NT)
 inputs[starts,1]
@@ -84,38 +79,20 @@ input_t
 @time fit!(mach)
 rf=report(mach)
 f = interp_2D(rf.equations[3], options,1.0)
-
-f(1,1)
-X = reshape(inputs[:,1],NT,N)
-tt = reshape(inputs[:,2],NT,N)
-b = f.(X,tt)
-It = find_It(X,b,a,NT,N)
-findall(isnan,It)
-
-sigma2 = find_sigma2(log.(X),It,a,NT)
-sigma = sqrt(abs(sigma2))
-g(z) = sigma*z
-
-# summ = SDE_Analysis_xonly(ff,g,1.0,0.45,0.55)
 using Plots
 
 summ = SDE_Analysis_xt(f,g,1.0,0.05,0.95)
 plot(summ)
-plot!(data[:,1,2],data[:,1,1])
+plot!(data[:,1,2],data[:,1,1]) # plot first data path as well
 
-plot([],[])
-plot(data[:,1,2],data[:,1,1])
-for i in 2:100
-    if !any(y->y<=5e-2,data[:,i,1])
-        plot!(data[:,i,2],data[:,i,1])
-    end
-end
-display(Plots.current())
+# Plot all data if desired
+# plot([],[])
+# plot(data[:,1,2],data[:,1,1])
+# for i in 2:100
+#     if !any(y->y<=5e-2,data[:,i,1])
+#         plot!(data[:,i,2],data[:,i,1])
+#     end
+# end
+# display(Plots.current())
 
 
-ff(z,s)=4.48*s^2*z+log(s+1e-12)
-X
-tt
-b = ff.(X,tt)
-QV_loss(X,b,a,num_timesteps,N)
-MGF_loss(X,b,a,S,num_timesteps,N)
